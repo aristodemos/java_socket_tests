@@ -1,0 +1,150 @@
+package objectserialization1;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Vector;
+
+/**
+ * @author ericjbruno
+ */
+public class ObjectSerialization1 {
+    boolean useBufferedIO = false;
+    
+    public class Listener extends Thread {
+        Socket client = null;
+        long start = -1;
+        int messagesReceived = 0;
+        
+        public Listener( Socket client ) {
+            this.client = client;
+            start(); // start the Thread
+        }
+        
+        public void run() {
+            // Wait for messages from client
+            try {
+                ObjectInputStream ois = null;
+                
+                if ( useBufferedIO ) {
+                    ois = new ObjectInputStream( 
+                            new BufferedInputStream( client.getInputStream() ));
+                }
+                else {
+                    ois = new ObjectInputStream( client.getInputStream() );
+                }
+                
+                System.out.println(this + " listening for messages");
+                while ( true ) {
+                    Message msg = (Message)ois.readObject();
+
+                    messagesReceived++;
+                    if ( start == -1 ) {
+                        start = System.currentTimeMillis();
+                    }
+                    
+                    if ( msg.type == Message.MESSAGE_TYPE_QUIT ) {
+                        break;
+                    }
+                }
+                
+                long end = System.currentTimeMillis();
+                double seconds = ((double)(end - start) / (double)1000);
+                int rate = (int)(messagesReceived / seconds);
+                System.out.println("Received " + messagesReceived + " objects at " + rate + " per sec");
+            }
+            catch ( Exception e ) {
+                e.printStackTrace();
+            }
+            
+            System.out.println(this + " terminating");
+            System.exit(0);
+        }
+    }
+    
+    public class Sender extends Thread {
+        public Sender( ) {
+            start();
+        }
+
+        public void run() {
+            try {
+                Socket sender = new Socket("localhost", 8081);
+                if ( sender != null && sender.isConnected() ) {
+                    ObjectOutputStream oos = null;
+                    if ( useBufferedIO ) {
+                        oos = new ObjectOutputStream( 
+                                new BufferedOutputStream( sender.getOutputStream() ));
+                    }
+                    else {
+                        oos = new ObjectOutputStream( sender.getOutputStream() );
+                    }                    
+                    
+                    // Send 100,000 messages
+                    int messages = 1;
+                    while ( messages < 100_000 ) {
+                        messages++;
+                        
+                        Message msg = new Message();
+                        msg.active = true;
+                        msg.userid = messages;
+                        msg.username = "User_" + messages;
+                        msg.data = this.toString();
+                        msg.type = Message.MESSAGE_TYPE_USER;
+                        
+                        oos.writeObject(msg);
+                        oos.flush();
+                    }
+                    
+                    // Send the terminate message
+                    Message msg = new Message();
+                    msg.type = Message.MESSAGE_TYPE_QUIT;
+                    oos.writeObject(msg);
+                    oos.flush();
+                }
+            }
+            catch ( Exception e ) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    Vector listeners = new Vector();
+    
+    public ObjectSerialization1() {
+        // Create a server socket in its own thread 
+        new Thread() {
+            public void run() {
+                System.out.println("Thread running");
+                try {
+                    ServerSocket clientConnect = new ServerSocket(8081);
+                    while ( true ) {
+                        Socket client = clientConnect.accept();
+                        
+                        // A new client connected, create a listener for it
+                        Listener listener = new Listener(client);
+                        listeners.add(listener);
+                    }
+                }
+                catch ( Exception e ) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+        
+        try { Thread.sleep(1000); } catch ( Exception e ) { }
+        
+        // Create a message sender
+        Sender sender = new Sender();
+        
+        System.out.println("end of constructor");
+    }
+    
+    public static void main(String[] args) {
+        ObjectSerialization1 os = new ObjectSerialization1();
+    }
+}
+</pre>
