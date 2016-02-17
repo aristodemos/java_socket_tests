@@ -1,8 +1,3 @@
-import sun.plugin2.message.Conversation;
-import sun.plugin2.message.Message;
-
-
-
 import java.io.BufferedOutputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;

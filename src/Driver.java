@@ -36,7 +36,7 @@ public class Driver {
             Thread.sleep(1000);
         }catch(Exception e){e.printStackTrace();}
         //Create a message sender
-        Sender sender = new Sender(flag);
+        //Sender sender = new Sender(flag);
 
         System.out.println("End of constructor");
     }

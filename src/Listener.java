@@ -1,5 +1,3 @@
-import sun.plugin2.message.Message;
-
 import java.io.BufferedInputStream;
 import java.io.ObjectInputStream;
 import java.net.Socket;
